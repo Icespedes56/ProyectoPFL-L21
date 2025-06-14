@@ -1,35 +1,54 @@
-import React, { useState } from 'react';
-import './App.css';
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Sidebar from "./components/Sidebar";
+import Dashboard from "./pages/Dashboard";
+import Procesamiento from "./pages/Procesamiento";
+import CruceLog from "./pages/CruceLog";
+import Repositorio from "./pages/Repositorio";
+import Buscador from "./pages/Buscador";
+import Ayuda from "./pages/Ayuda";
 
-function App() {
-  const [file, setFile] = useState(null);
-  
-  // Función para manejar la carga del archivo
-  const handleFileChange = (event) => {
-    setFile(event.target.files[0]);
-  };
-
-  // Función para procesar el archivo (en este caso, solo muestra el nombre del archivo)
-  const processFile = () => {
-    if (!file) {
-      alert("Por favor, selecciona un archivo.");
-      return;
-    }
-
-    alert(`Archivo cargado: ${file.name}`);
-    // Aquí puedes agregar la lógica para enviar el archivo al backend y procesarlo
-  };
-
+export default function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>Procesador de Planillas Parafiscales</h1>
-        <input type="file" onChange={handleFileChange} />
-        <button onClick={processFile}>Procesar archivo</button>
-      </header>
-    </div>
+    <Router>
+      <div className="flex">
+        <Sidebar />
+        <main className="flex-1 p-10 bg-gray-100">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/procesamiento" element={<Procesamiento />} />
+            <Route path="/cruce-log" element={<CruceLog />} />
+            <Route path="/repositorio" element={<Repositorio />} />
+            <Route path="/buscador" element={<Buscador />} />
+            <Route path="/ayuda" element={<Ayuda />} />
+          </Routes>
+        </main>
+      </div>
+    </Router>
   );
 }
 
-export default App;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
