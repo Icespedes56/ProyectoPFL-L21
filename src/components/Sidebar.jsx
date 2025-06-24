@@ -1,10 +1,11 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, FileText, Layers, Folder, Search, HelpCircle, LogOut } from "lucide-react";
+import { Home, FileText, Layers, Folder, Search, HelpCircle, LogOut, Database } from "lucide-react";
 
 const menuItems = [
   { icon: <Home size={20} />, label: "Dashboard", path: "/" },
+  { icon: <Database size={20} />, label: "Control Aportantes", path: "/control-aportantes" },
+  { icon: <Layers size={20} />, label: "Cruce Log Bancario", path: "/cruce-log" },
   { icon: <FileText size={20} />, label: "Procesamiento", path: "/procesamiento" },
-  { icon: <Layers size={20} />, label: "Cruce Log Bancario", path: "/cruce" },
   { icon: <Folder size={20} />, label: "Repositorio", path: "/repositorio" },
   { icon: <Search size={20} />, label: "Buscador", path: "/buscador" },
   { icon: <HelpCircle size={20} />, label: "Configuración", path: "/configuracion" },
@@ -18,7 +19,7 @@ export default function Sidebar() {
       {/* Logo y título */}
       <div className="text-2xl font-bold mb-10">
         <img src="/image.png" alt="ESAP" className="h-10 mb-3" />
-        <span className="text-lg">ESAP Aportes</span>
+        <span className="text-lg">Administrador Parafiscales</span>
       </div>
 
       {/* Menú lateral */}
