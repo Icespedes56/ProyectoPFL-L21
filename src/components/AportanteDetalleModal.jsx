@@ -1,12 +1,41 @@
-import React, { useState, useMemo } from 'react';
-import { X, Download, Search, Building2, Users, Phone, Mail, MapPin, Calendar, FileText, ExternalLink, Copy } from 'lucide-react';
-import PlanillasViewer from './PlanillasViewer'; // Importar el nuevo componente
+import React, { useState, useMemo, useEffect } from 'react';
+import { 
+  X, Download, Search, Building2, Users, Phone, Mail, MapPin, Calendar, 
+  FileText, ExternalLink, Copy, CheckCircle, AlertCircle, DollarSign,
+  TrendingUp, Clock, Database
+} from 'lucide-react';
+import PlanillasViewer from './PlanillasViewer';
 
 const AportanteDetalleModal = ({ nit, detalle, onClose }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedRow, setExpandedRow] = useState(null);
   const [planillasModalOpen, setPlanillasModalOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [planillasInfo, setPlanillasInfo] = useState(null);
+  const [loadingPlanillasInfo, setLoadingPlanillasInfo] = useState(true);
+
+  // Cargar información de planillas al montar el componente
+  useEffect(() => {
+    if (nit) {
+      verificarPlanillasDisponibles();
+    }
+  }, [nit]);
+
+  const verificarPlanillasDisponibles = async () => {
+    setLoadingPlanillasInfo(true);
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/verificar_planillas_disponibles/${nit}`);
+      if (response.ok) {
+        const data = await response.json();
+        setPlanillasInfo(data);
+      }
+    } catch (error) {
+      console.error('Error verificando planillas:', error);
+      setPlanillasInfo({ tiene_planillas: false, total_planillas: 0 });
+    } finally {
+      setLoadingPlanillasInfo(false);
+    }
+  };
 
   // Función SÚPER ROBUSTA para encontrar la columna de municipio
   const encontrarColumnaMunicipio = (row) => {
@@ -172,6 +201,15 @@ const AportanteDetalleModal = ({ nit, detalle, onClose }) => {
     link.click();
   };
 
+  const formatCurrency = (value) => {
+    if (!value || value === 0) return '$0';
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 0
+    }).format(value);
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center p-4 z-50">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-[95vw] h-[95vh] flex flex-col overflow-hidden">
@@ -209,14 +247,36 @@ const AportanteDetalleModal = ({ nit, detalle, onClose }) => {
             </div>
             
             <div className="flex items-center gap-3">
-              {/* Nuevo botón para abrir módulo de planillas */}
+              {/* Botón mejorado para ver planillas con información */}
               <button
                 onClick={() => openPlanillasModal(generalInfo)}
-                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl hover:from-purple-600 hover:to-indigo-600 transition-all backdrop-blur-sm font-medium shadow-lg"
+                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium shadow-lg transition-all duration-200 ${
+                  planillasInfo?.tiene_planillas
+                    ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600'
+                    : 'bg-gradient-to-r from-gray-500 to-gray-600 text-white hover:from-gray-600 hover:to-gray-700'
+                }`}
+                disabled={loadingPlanillasInfo}
               >
-                <FileText className="w-5 h-5" />
-                Ver Planillas
+                {loadingPlanillasInfo ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Verificando...
+                  </>
+                ) : planillasInfo?.tiene_planillas ? (
+                  <>
+                    <Database className="w-5 h-5" />
+                    Ver Planillas ({planillasInfo.total_planillas})
+                    <CheckCircle className="w-4 h-4" />
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-5 h-5" />
+                    Sin Planillas
+                    <AlertCircle className="w-4 h-4" />
+                  </>
+                )}
               </button>
+              
               <button
                 onClick={exportToCSV}
                 className="flex items-center gap-2 px-6 py-3 bg-white bg-opacity-20 text-white rounded-xl hover:bg-opacity-30 transition-all backdrop-blur-sm font-medium"
@@ -233,8 +293,8 @@ const AportanteDetalleModal = ({ nit, detalle, onClose }) => {
             </div>
           </div>
 
-          {/* Stats Bar */}
-          <div className="grid grid-cols-4 gap-6 mt-8">
+          {/* Stats Bar Mejorado */}
+          <div className="grid grid-cols-5 gap-6 mt-8">
             <div className="text-center">
               <div className="text-3xl font-bold text-white">{stats.totalRegistros}</div>
               <div className="text-blue-200 text-sm">Registros</div>
@@ -251,7 +311,37 @@ const AportanteDetalleModal = ({ nit, detalle, onClose }) => {
               <div className="text-3xl font-bold text-orange-400">{stats.municipios}</div>
               <div className="text-blue-200 text-sm">Municipios</div>
             </div>
+            <div className="text-center">
+              {loadingPlanillasInfo ? (
+                <div className="text-2xl font-bold text-gray-400">...</div>
+              ) : (
+                <div className={`text-3xl font-bold ${planillasInfo?.tiene_planillas ? 'text-green-400' : 'text-gray-400'}`}>
+                  {planillasInfo?.total_planillas || 0}
+                </div>
+              )}
+              <div className="text-blue-200 text-sm">Planillas</div>
+            </div>
           </div>
+
+          {/* Información adicional de planillas si están disponibles */}
+          {planillasInfo?.tiene_planillas && (
+            <div className="mt-4 p-4 bg-white bg-opacity-10 rounded-xl backdrop-blur-sm">
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-green-400" />
+                  <span className="text-blue-200">Datos financieros disponibles</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-blue-400" />
+                  <span className="text-blue-200">Historial de pagos</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-400" />
+                  <span className="text-blue-200">Información completa</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Layout de dos paneles */}
@@ -285,6 +375,50 @@ const AportanteDetalleModal = ({ nit, detalle, onClose }) => {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Estado de Planillas */}
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div className="flex items-center gap-3 mb-4">
+                  <Database className="w-6 h-6 text-purple-600" />
+                  <h3 className="text-lg font-semibold text-gray-900">Estado de Planillas</h3>
+                </div>
+                {loadingPlanillasInfo ? (
+                  <div className="text-center py-4">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+                    <p className="text-sm text-gray-600 mt-2">Verificando...</p>
+                  </div>
+                ) : planillasInfo?.tiene_planillas ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <span className="text-green-800 font-medium">Planillas Disponibles</span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3">
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <div className="text-2xl font-bold text-purple-600">
+                          {planillasInfo.total_planillas}
+                        </div>
+                        <div className="text-sm text-gray-600">Total de planillas</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => openPlanillasModal(generalInfo)}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                    >
+                      <FileText className="w-4 h-4" />
+                      Ver Todas las Planillas
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <AlertCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-600 font-medium">Sin planillas procesadas</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      No se encontraron planillas en el sistema para este NIT
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Ubicación */}
@@ -440,10 +574,24 @@ const AportanteDetalleModal = ({ nit, detalle, onClose }) => {
                             <td className="px-6 py-4 whitespace-nowrap text-center">
                               <button
                                 onClick={() => openPlanillasModal(row)}
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg text-sm font-medium transition-all duration-200"
+                                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                  planillasInfo?.tiene_planillas
+                                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                    : 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                                }`}
+                                disabled={!planillasInfo?.tiene_planillas}
                               >
-                                <Search className="w-4 h-4" />
-                                Ver Detalle
+                                {planillasInfo?.tiene_planillas ? (
+                                  <>
+                                    <Database className="w-4 h-4" />
+                                    Ver Planillas
+                                  </>
+                                ) : (
+                                  <>
+                                    <AlertCircle className="w-4 h-4" />
+                                    Sin Planillas
+                                  </>
+                                )}
                               </button>
                             </td>
                           </tr>

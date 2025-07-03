@@ -1,8 +1,97 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import AportantesTable from '../components/AportantesTable';
 import AportanteDetalleModal from '../components/AportanteDetalleModal';
 import ColombiaMap from '../components/ColombiaMap';
-import { Upload, FileSpreadsheet, Users, Database, Filter, MapPin, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Upload, FileSpreadsheet, Database, Filter, MapPin, Trash2, Eye, EyeOff, ChevronDown, Search, Check, TrendingUp } from 'lucide-react';
+
+// Componente Dropdown Profesional Compacto
+const ProfessionalDropdown = ({ options, value, onChange, placeholder, disabled = false, searchable = true }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const dropdownRef = useRef(null);
+
+  const filteredOptions = searchable 
+    ? options.filter(option => option.label.toLowerCase().includes(searchTerm.toLowerCase()))
+    : options;
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+        setSearchTerm('');
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  const selectedOption = options.find(opt => opt.value === value);
+  const displayText = selectedOption ? selectedOption.label : placeholder;
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
+        className={`w-full px-4 py-3 text-left border rounded-xl transition-all duration-200 font-medium text-sm flex items-center justify-between ${
+          disabled 
+            ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed' 
+            : 'bg-white border-gray-300 text-gray-900 hover:border-blue-400 hover:shadow-md focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none'
+        } ${isOpen ? 'ring-2 ring-blue-500 ring-opacity-20 border-blue-500' : ''}`}
+      >
+        <div className="flex items-center gap-3">
+          <MapPin className={`w-4 h-4 ${disabled ? 'text-gray-400' : 'text-blue-600'}`} />
+          <span className={value ? 'text-gray-900' : 'text-gray-500'}>{displayText}</span>
+        </div>
+        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-2xl shadow-2xl z-[9999] backdrop-blur-xl">
+          {searchable && (
+            <div className="p-4 border-b border-gray-100">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Buscar..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  autoFocus
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="max-h-64 overflow-y-auto py-2">
+            {filteredOptions.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                  setSearchTerm('');
+                }}
+                className={`w-full text-left px-4 py-3 text-sm transition-all duration-150 flex items-center justify-between ${
+                  value === option.value 
+                    ? 'bg-blue-50 text-blue-700 font-medium' 
+                    : 'text-gray-700 hover:bg-blue-50'
+                }`}
+              >
+                <span>{option.label}</span>
+                {value === option.value && <Check className="w-4 h-4 text-blue-600" />}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const ControlAportantes = () => {
   // Estados principales
@@ -13,7 +102,6 @@ const ControlAportantes = () => {
   const [detalle, setDetalle] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(false);
   const [fileInfo, setFileInfo] = useState(JSON.parse(localStorage.getItem('aportantes_file_info') || 'null'));
   
   // Estados para filtros
@@ -31,7 +119,10 @@ const ControlAportantes = () => {
   const [showMap, setShowMap] = useState(true);
   const [aportantesData, setAportantesData] = useState([]);
 
-  // Cargar datos al iniciar si hay una sesión guardada
+  // Estado para NITs con planillas
+  const [nitsWithPlanillas, setNitsWithPlanillas] = useState(new Set());
+
+  // Cargar datos al iniciar
   useEffect(() => {
     if (sessionId) {
       loadSessionData();
@@ -43,18 +134,15 @@ const ControlAportantes = () => {
     
     setLoading(true);
     try {
-      // Cargar NITs
       const response = await fetch(`http://127.0.0.1:8000/aportantes_nits/${sessionId}`);
       if (response.ok) {
         const data = await response.json();
         setNits(data.nits || []);
         setFilteredNits(data.nits || []);
         
-        // Cargar filtros geográficos
         await fetchGeographicFilters(sessionId);
-        
-        // Cargar todos los datos para el mapa
         await fetchAllDataForMap(sessionId);
+        await fetchNitsWithPlanillas(sessionId);
       } else {
         throw new Error('Error loading NITs');
       }
@@ -63,6 +151,25 @@ const ControlAportantes = () => {
       clearSession();
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchNitsWithPlanillas = async (sessionId) => {
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/aportantes_nits_with_planillas/${sessionId}`);
+      if (response.ok) {
+        const data = await response.json();
+        const nitsSet = new Set();
+        (data.nits_with_planillas || []).forEach(nit => {
+          nitsSet.add(nit);
+          nitsSet.add(nit.toString());
+          nitsSet.add(parseInt(nit));
+        });
+        setNitsWithPlanillas(nitsSet);
+      }
+    } catch (error) {
+      console.error('Error fetching NITs with planillas:', error);
+      setNitsWithPlanillas(new Set());
     }
   };
 
@@ -84,7 +191,6 @@ const ControlAportantes = () => {
     if (!file) return;
 
     setLoading(true);
-    setUploadProgress(true);
     const newFileInfo = { name: file.name, size: (file.size / 1024 / 1024).toFixed(2) };
     setFileInfo(newFileInfo);
 
@@ -109,6 +215,7 @@ const ControlAportantes = () => {
         await fetchNits(newSessionId);
         await fetchGeographicFilters(newSessionId);
         await fetchAllDataForMap(newSessionId);
+        await fetchNitsWithPlanillas(newSessionId);
       } else {
         throw new Error('Error al procesar el archivo');
       }
@@ -118,7 +225,6 @@ const ControlAportantes = () => {
       setFileInfo(null);
     } finally {
       setLoading(false);
-      setUploadProgress(false);
     }
   };
 
@@ -229,6 +335,7 @@ const ControlAportantes = () => {
     setFilters({ departamento: '', municipio: '', nitSearch: '' });
     setAvailableFilters({ departamentos: [], municipios: [] });
     setAportantesData([]);
+    setNitsWithPlanillas(new Set());
     
     localStorage.removeItem('aportantes_session_id');
     localStorage.removeItem('aportantes_file_info');
@@ -252,7 +359,6 @@ const ControlAportantes = () => {
   };
 
   const handleMapLocationClick = (locationName) => {
-    // Si es un departamento válido, aplicar filtro
     if (availableFilters.departamentos.includes(locationName)) {
       handleFilterChange('departamento', locationName);
     }
@@ -290,6 +396,17 @@ const ControlAportantes = () => {
     }
   }, [filters.nitSearch, sessionId]);
 
+  // Preparar opciones para los dropdowns
+  const departamentosOptions = [
+    { value: '', label: 'Todos los departamentos' },
+    ...(availableFilters.departamentos || []).map(dept => ({ value: dept, label: dept }))
+  ];
+
+  const municipiosOptions = [
+    { value: '', label: 'Todos los municipios' },
+    ...(availableFilters.municipios || []).map(mun => ({ value: mun, label: mun }))
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header compacto */}
@@ -306,7 +423,6 @@ const ControlAportantes = () => {
               </div>
             </div>
             
-            {/* Área de carga y controles */}
             <div className="flex items-center gap-4">
               {fileInfo && !loading && (
                 <div className="text-right">
@@ -315,18 +431,14 @@ const ControlAportantes = () => {
                 </div>
               )}
               
-              {/* Control del mapa */}
               {(nits?.length || 0) > 0 && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setShowMap(!showMap)}
-                    className="flex items-center gap-2 px-3 py-2 bg-white bg-opacity-20 text-white rounded-lg hover:bg-opacity-30 transition-all text-sm"
-                    title={showMap ? 'Ocultar mapa' : 'Mostrar mapa'}
-                  >
-                    {showMap ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    {showMap ? 'Ocultar' : 'Mostrar'} Mapa
-                  </button>
-                </div>
+                <button
+                  onClick={() => setShowMap(!showMap)}
+                  className="flex items-center gap-2 px-3 py-2 bg-white bg-opacity-20 text-white rounded-lg hover:bg-opacity-30 transition-all text-sm"
+                >
+                  {showMap ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showMap ? 'Ocultar' : 'Mostrar'} Mapa
+                </button>
               )}
               
               <div className="relative">
@@ -340,13 +452,11 @@ const ControlAportantes = () => {
                 />
                 <label
                   htmlFor="file-upload"
-                  className={`
-                    inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sm
-                    ${loading 
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sm ${
+                    loading 
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
                       : 'bg-white text-blue-700 hover:bg-blue-50 cursor-pointer shadow-lg hover:shadow-xl'
-                    }
-                  `}
+                  }`}
                 >
                   {loading ? (
                     <>
@@ -366,7 +476,6 @@ const ControlAportantes = () => {
                 <button
                   onClick={clearSession}
                   className="flex items-center gap-1 text-blue-200 hover:text-white text-sm px-2 py-1 rounded hover:bg-blue-600 transition-colors"
-                  title="Limpiar datos y archivo"
                 >
                   <Trash2 className="w-4 h-4" />
                   Limpiar
@@ -377,50 +486,105 @@ const ControlAportantes = () => {
         </div>
       </div>
 
-      {/* Filtros superiores */}
+      {/* Panel de Filtros Geográficos */}
       {(nits?.length || 0) > 0 && (
-        <div className="bg-white border-b border-gray-200 shadow-sm">
-          <div className="container mx-auto px-6 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white border-b border-gray-100">
+          <div className="container mx-auto px-6 py-6">
+            
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <MapPin className="w-5 h-5 text-blue-600" />
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Filtros Geográficos</h3>
+                  <p className="text-sm text-gray-600">Refina tu búsqueda por ubicación geográfica</p>
+                </div>
+              </div>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+                <div className="text-2xl font-bold text-blue-600">{filteredNits?.length || 0}</div>
+                <div className="text-sm text-blue-600">de {nits?.length || 0} NITs</div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  <MapPin className="w-4 h-4 inline mr-1" />
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Departamento
                 </label>
-                <select
+                <ProfessionalDropdown
+                  options={departamentosOptions}
                   value={filters.departamento}
-                  onChange={(e) => handleFilterChange('departamento', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                >
-                  <option value="">Todos los departamentos</option>
-                  {(availableFilters.departamentos || []).map(dept => (
-                    <option key={dept} value={dept}>{dept}</option>
-                  ))}
-                </select>
+                  onChange={(value) => handleFilterChange('departamento', value)}
+                  placeholder="Selecciona un departamento"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {availableFilters.departamentos?.length || 0} departamentos disponibles
+                </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  <MapPin className="w-4 h-4 inline mr-1" />
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Municipio
                 </label>
-                <select
+                <ProfessionalDropdown
+                  options={municipiosOptions}
                   value={filters.municipio}
-                  onChange={(e) => handleFilterChange('municipio', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  onChange={(value) => handleFilterChange('municipio', value)}
+                  placeholder="Selecciona un municipio"
                   disabled={!filters.departamento}
-                >
-                  <option value="">Todos los municipios</option>
-                  {(availableFilters.municipios || []).map(mun => (
-                    <option key={mun} value={mun}>{mun}</option>
-                  ))}
-                </select>
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {!filters.departamento 
+                    ? "0 municipios disponibles (selecciona un departamento primero)"
+                    : `${availableFilters.municipios?.length || 0} municipios disponibles`
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Barra de estadísticas */}
+      {(nits?.length || 0) > 0 && (
+        <div className="bg-gray-50 border-b border-gray-100">
+          <div className="container mx-auto px-6 py-4">
+            <div className="flex flex-wrap items-center gap-6">
+              
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-blue-600" />
+                <h4 className="font-semibold text-gray-900">NITs Únicos</h4>
               </div>
 
-              <div className="flex items-end">
-                <div className="text-sm text-gray-600 bg-blue-50 px-3 py-2 rounded-lg border w-full text-center">
-                  <Filter className="w-4 h-4 inline mr-1" />
-                  <strong>{filteredNits?.length || 0}</strong> de <strong>{nits?.length || 0}</strong> NITs
+              <div className="flex items-center gap-6 text-sm">
+                <span className="text-gray-600">
+                  <span className="font-bold text-xl text-gray-900">{filteredNits?.length || 0}</span>
+                  <span className="text-gray-500"> de {nits?.length || 0} registros</span>
+                </span>
+
+                <div className="w-px h-4 bg-gray-300"></div>
+
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
+                  <span className="font-bold text-emerald-700">
+                    {filteredNits?.filter(nit => 
+                      nitsWithPlanillas.has(nit) || nitsWithPlanillas.has(nit.toString())
+                    ).length || 0}
+                  </span>
+                  <span className="text-gray-600">con planillas procesadas</span>
+                </div>
+
+                <div className="w-px h-4 bg-gray-300"></div>
+
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                  <span className="font-bold text-gray-700">
+                    {filteredNits?.filter(nit => 
+                      !nitsWithPlanillas.has(nit) && !nitsWithPlanillas.has(nit.toString())
+                    ).length || 0}
+                  </span>
+                  <span className="text-gray-600">pendientes</span>
                 </div>
               </div>
             </div>
@@ -428,21 +592,20 @@ const ControlAportantes = () => {
         </div>
       )}
 
-      {/* Contenido principal: LAYOUT DE 2 COLUMNAS */}
+      {/* Contenido principal */}
       {(nits?.length || 0) > 0 && (
         <div className="container mx-auto px-6 py-6">
-          <div className={`grid gap-6 h-[calc(100vh-300px)] ${showMap ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1'}`}>
-            {/* Columna Izquierda: Tabla de NITs - 2/3 del espacio */}
+          <div className={`grid gap-6 h-[calc(100vh-320px)] ${showMap ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1'}`}>
             <div className={showMap ? "lg:col-span-2" : "col-span-1"}>
               <AportantesTable 
                 nits={filteredNits} 
                 onNitClick={handleNitClick} 
                 loading={loading}
                 compact={true}
+                nitsWithPlanillas={nitsWithPlanillas}
               />
             </div>
             
-            {/* Columna Derecha: Mapa FIJO y STICKY - 1/3 del espacio */}
             {showMap && (
               <div className="lg:col-span-1">
                 <div className="sticky top-6">
@@ -462,7 +625,7 @@ const ControlAportantes = () => {
         </div>
       )}
 
-      {/* Estado inicial cuando no hay datos */}
+      {/* Estado inicial */}
       {(nits?.length || 0) === 0 && !loading && (
         <div className="container mx-auto px-6 py-12">
           <div className="text-center">

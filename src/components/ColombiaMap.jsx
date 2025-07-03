@@ -11,7 +11,8 @@ const ColombiaMapSeparatedInfo = ({
   showStats = true,
   isFloating = false 
 }) => {
-  const [position, setPosition] = useState({ coordinates: [-74.0, 4.0], zoom: 1.2 });
+  // ZOOM POR DEFECTO CAMBIADO A 0.9x
+  const [position, setPosition] = useState({ coordinates: [-74.0, 4.0], zoom: 0.9 });
   const [hoveredLocation, setHoveredLocation] = useState(null);
   const [mapData, setMapData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -113,41 +114,41 @@ const ColombiaMapSeparatedInfo = ({
     return null;
   };
 
-  // Configuración de zoom
+  // Configuración de zoom - FACTORES REDUCIDOS PARA 0.9x BASE
   const departmentConfig = {
-    'ANTIOQUIA': { coordinates: [-75.6, 6.2], zoom: 3.5 },
-    'CUNDINAMARCA': { coordinates: [-74.1, 4.6], zoom: 3.5 },
-    'VALLE DEL CAUCA': { coordinates: [-76.5, 3.4], zoom: 3.5 },
-    'SANTANDER': { coordinates: [-73.1, 7.1], zoom: 3.5 },
-    'ATLÁNTICO': { coordinates: [-74.8, 10.9], zoom: 5 },
-    'BOGOTÁ, D.C.': { coordinates: [-74.08, 4.6], zoom: 5 },
-    'BOLÍVAR': { coordinates: [-75.0, 9.0], zoom: 3.5 },
-    'BOYACÁ': { coordinates: [-73.0, 5.5], zoom: 3.5 },
-    'CALDAS': { coordinates: [-75.5, 5.3], zoom: 4 },
-    'CAQUETÁ': { coordinates: [-75.0, 1.5], zoom: 3.5 },
-    'CASANARE': { coordinates: [-72.0, 5.5], zoom: 3.5 },
-    'CAUCA': { coordinates: [-76.5, 2.5], zoom: 3.5 },
-    'CESAR': { coordinates: [-73.5, 9.5], zoom: 3.5 },
-    'CHOCÓ': { coordinates: [-77.0, 6.0], zoom: 3.5 },
-    'CÓRDOBA': { coordinates: [-75.5, 8.5], zoom: 3.5 },
-    'HUILA': { coordinates: [-75.5, 2.5], zoom: 3.5 },
-    'LA GUAJIRA': { coordinates: [-72.5, 11.5], zoom: 3.5 },
-    'MAGDALENA': { coordinates: [-74.5, 10.5], zoom: 3.5 },
-    'META': { coordinates: [-73.5, 3.5], zoom: 3.5 },
-    'NARIÑO': { coordinates: [-77.5, 1.5], zoom: 3.5 },
-    'NORTE DE SANTANDER': { coordinates: [-72.5, 8.0], zoom: 3.5 },
-    'PUTUMAYO': { coordinates: [-76.5, 0.5], zoom: 3.5 },
-    'QUINDÍO': { coordinates: [-75.7, 4.5], zoom: 5 },
-    'RISARALDA': { coordinates: [-75.9, 5.0], zoom: 4 },
-    'SUCRE': { coordinates: [-75.0, 9.0], zoom: 4 },
-    'TOLIMA': { coordinates: [-75.0, 4.0], zoom: 3.5 },
-    'ARAUCA': { coordinates: [-71.0, 7.0], zoom: 3.5 },
-    'AMAZONAS': { coordinates: [-70.0, -2.0], zoom: 2.5 },
-    'GUAINÍA': { coordinates: [-68.0, 2.5], zoom: 3.5 },
-    'GUAVIARE': { coordinates: [-72.5, 2.0], zoom: 3.5 },
-    'VAUPÉS': { coordinates: [-70.5, 1.0], zoom: 3.5 },
-    'VICHADA': { coordinates: [-69.5, 5.0], zoom: 3 },
-    'ARCHIPIÉLAGO DE SAN ANDRÉS, PROVIDENCIA Y SANTA CATALINA': { coordinates: [-81.7, 12.5], zoom: 5 }
+    'ANTIOQUIA': { coordinates: [-75.6, 6.2], zoom: 3.2 },
+    'CUNDINAMARCA': { coordinates: [-74.1, 4.6], zoom: 3.2 },
+    'VALLE DEL CAUCA': { coordinates: [-76.5, 3.4], zoom: 3.2 },
+    'SANTANDER': { coordinates: [-73.1, 7.1], zoom: 3.2 },
+    'ATLÁNTICO': { coordinates: [-74.8, 10.9], zoom: 4.5 },
+    'BOGOTÁ, D.C.': { coordinates: [-74.08, 4.6], zoom: 4.5 },
+    'BOLÍVAR': { coordinates: [-75.0, 9.0], zoom: 3.2 },
+    'BOYACÁ': { coordinates: [-73.0, 5.5], zoom: 3.2 },
+    'CALDAS': { coordinates: [-75.5, 5.3], zoom: 3.6 },
+    'CAQUETÁ': { coordinates: [-75.0, 1.5], zoom: 3.2 },
+    'CASANARE': { coordinates: [-72.0, 5.5], zoom: 3.2 },
+    'CAUCA': { coordinates: [-76.5, 2.5], zoom: 3.2 },
+    'CESAR': { coordinates: [-73.5, 9.5], zoom: 3.2 },
+    'CHOCÓ': { coordinates: [-77.0, 6.0], zoom: 3.2 },
+    'CÓRDOBA': { coordinates: [-75.5, 8.5], zoom: 3.2 },
+    'HUILA': { coordinates: [-75.5, 2.5], zoom: 3.2 },
+    'LA GUAJIRA': { coordinates: [-72.5, 11.5], zoom: 3.2 },
+    'MAGDALENA': { coordinates: [-74.5, 10.5], zoom: 3.2 },
+    'META': { coordinates: [-73.5, 3.5], zoom: 3.2 },
+    'NARIÑO': { coordinates: [-77.5, 1.5], zoom: 3.2 },
+    'NORTE DE SANTANDER': { coordinates: [-72.5, 8.0], zoom: 3.2 },
+    'PUTUMAYO': { coordinates: [-76.5, 0.5], zoom: 3.2 },
+    'QUINDÍO': { coordinates: [-75.7, 4.5], zoom: 4.5 },
+    'RISARALDA': { coordinates: [-75.9, 5.0], zoom: 3.6 },
+    'SUCRE': { coordinates: [-75.0, 9.0], zoom: 3.6 },
+    'TOLIMA': { coordinates: [-75.0, 4.0], zoom: 3.2 },
+    'ARAUCA': { coordinates: [-71.0, 7.0], zoom: 3.2 },
+    'AMAZONAS': { coordinates: [-70.0, -2.0], zoom: 2.3 },
+    'GUAINÍA': { coordinates: [-68.0, 2.5], zoom: 3.2 },
+    'GUAVIARE': { coordinates: [-72.5, 2.0], zoom: 3.2 },
+    'VAUPÉS': { coordinates: [-70.5, 1.0], zoom: 3.2 },
+    'VICHADA': { coordinates: [-69.5, 5.0], zoom: 2.7 },
+    'ARCHIPIÉLAGO DE SAN ANDRÉS, PROVIDENCIA Y SANTA CATALINA': { coordinates: [-81.7, 12.5], zoom: 4.5 }
   };
 
   // Cargar datos del mapa
@@ -193,9 +194,10 @@ const ColombiaMapSeparatedInfo = ({
         });
       }
     } else {
+      // VISTA POR DEFECTO CON 0.9x
       setPosition({
         coordinates: [-74.0, 4.0],
-        zoom: 1.2
+        zoom: 0.9
       });
     }
   }, [selectedDepartamento]);
@@ -256,12 +258,13 @@ const ColombiaMapSeparatedInfo = ({
   };
 
   const handleZoomOut = () => {
-    if (position.zoom <= 0.8) return;
+    if (position.zoom <= 0.7) return; // Límite reducido para 0.9x base
     setPosition(pos => ({ ...pos, zoom: pos.zoom / 1.3 }));
   };
 
   const handleResetView = () => {
-    setPosition({ coordinates: [-74.0, 4.0], zoom: 1.2 });
+    // RESET A 0.9x
+    setPosition({ coordinates: [-74.0, 4.0], zoom: 0.9 });
     if (onFilterChange) {
       onFilterChange('departamento', '');
       onFilterChange('municipio', '');
@@ -360,12 +363,12 @@ const ColombiaMapSeparatedInfo = ({
 
   return (
     <div className="space-y-2">
-      {/* MAPA COMPLETAMENTE SOLO - ALTURA REDUCIDA */}
+      {/* MAPA COMPLETAMENTE SOLO - ALTURA REDUCIDA - ESCALA 0.9x */}
       <div className="w-full h-[380px] bg-gradient-to-br from-slate-50 to-blue-50 rounded-xl shadow-lg border border-slate-200 overflow-hidden">
         <ComposableMap
           projection="geoMercator"
           projectionConfig={{
-            scale: 4500,
+            scale: 4050, // Reducido de 4500 a 4050 para efecto 0.9x
             center: [-74, 4]
           }}
           width={1200}
@@ -430,7 +433,7 @@ const ColombiaMapSeparatedInfo = ({
         <div className="flex bg-white rounded-lg p-1 border border-slate-200 shadow-md">
           <button
             onClick={handleZoomOut}
-            disabled={position.zoom <= 0.8}
+            disabled={position.zoom <= 0.7}
             className="p-1.5 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded transition-all disabled:opacity-50"
             title="Alejar vista"
           >
@@ -513,7 +516,7 @@ const ColombiaMapSeparatedInfo = ({
                 </div>
                 <div>
                   <div className="text-white font-bold text-sm">República de Colombia</div>
-                  <div className="text-slate-300 text-xs">Vista Nacional</div>
+                  <div className="text-slate-300 text-xs">Vista Nacional - Escala 0.9x</div>
                 </div>
 
                 {hoveredLocation && (
